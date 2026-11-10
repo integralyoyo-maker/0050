@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="台股訊號">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>台股訊號與回測</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>台股訊號與回測</h1>
+  <div class="pickers">
+    <select id="symbol" aria-label="標的"></select>
+    <select id="strategy" aria-label="策略"></select>
+  </div>
+</header>
+
+<div id="demo-banner" class="banner" hidden>
+  ⚠ 目前顯示的是「範例假資料」，只用來測試版面，數字沒有任何意義。請執行 <code>python build_data.py</code> 產生真實資料。
+</div>
+
+<section class="quote">
+  <div>
+    <div id="q-name" class="q-name">—</div>
+    <div id="q-price" class="q-price">—</div>
+  </div>
+  <div id="q-change" class="q-change">—</div>
+  <div id="q-date" class="q-date"></div>
+</section>
+
+<section class="card">
+  <div class="toggles" id="toggles">
+    <label><input type="checkbox" data-k="ma" checked> MA</label>
+    <label><input type="checkbox" data-k="boll" checked> 布林</label>
+    <label><input type="checkbox" data-k="ema200" checked> EMA200</label>
+    <label><input type="checkbox" data-k="vsa" checked> VSA 主要訊號</label>
+    <label><input type="checkbox" data-k="vsa2"> VSA 次要訊號</label>
+    <label><input type="checkbox" data-k="gap" checked> 未補缺口</label>
+    <label><input type="checkbox" data-k="strat" checked> 策略買賣點</label>
+  </div>
+  <div id="legend" class="legend">&nbsp;</div>
+  <div id="chart" class="chart"></div>
+  <div class="hint">左右拖曳平移 · 滾輪或雙指縮放 · 長按/移動查價。紅漲綠跌（台股慣例）。買賣標記是「訊號日」，實際回測在隔天開盤成交。</div>
+</section>
+
+<section class="card">
+  <h2 id="s-title">策略績效</h2>
+  <p id="s-desc" class="desc"></p>
+  <div id="stats" class="stats"></div>
+  <div id="warn" class="warn" hidden></div>
+  <div id="eq" class="chart eq"></div>
+  <div class="hint"><span class="dot s"></span>策略　<span class="dot b"></span>買進持有（同期間、同一標的）</div>
+</section>
+
+<section class="card">
+  <h2>最近交易明細（最多 30 筆）</h2>
+  <div class="table-wrap">
+    <table id="trades"><thead>
+      <tr><th>進場日</th><th>出場日</th><th>進場價</th><th>出場價</th><th>報酬</th><th>天數</th></tr>
+    </thead><tbody></tbody></table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>目前未補缺口</h2>
+  <div class="table-wrap">
+    <table id="gaps"><thead><tr><th>日期</th><th>方向</th><th>缺口區間</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<footer>
+  <p>本站為個人學習用的技術分析與回測工具，<b>不構成任何投資建議</b>。歷史回測不代表未來績效；回測已扣手續費與證交稅，但未計滑價、漲跌停無法成交、流動性與稅務差異。
+  VSA 訊號為依概念寫的簡化版定義。</p>
+  <p id="updated"></p>
+</footer>
+
+<script src="lightweight-charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
