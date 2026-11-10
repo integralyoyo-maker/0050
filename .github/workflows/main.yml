@@ -3,6 +3,9 @@ name: Deploy static content to Pages
 on:
   push:
     branches: ["main"]
+  schedule:
+    # 台灣時間每週一至週五 16:00 自動執行 (UTC 08:00)
+    - cron: '0 8 * * 1-5'
   workflow_dispatch:
 
 permissions:
