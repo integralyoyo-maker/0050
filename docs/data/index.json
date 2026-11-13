@@ -5,37 +5,37 @@
    "symbol": "^TWII",
    "name": "加權指數",
    "file": "_TWII.json",
-   "date": "2026-11-11",
-   "close": 44257.1484,
-   "change": 1545.2266,
-   "pct": 3.6178
+   "date": "2026-11-13",
+   "close": 43675.1211,
+   "change": 583.25,
+   "pct": 1.3535
   },
   {
    "symbol": "2330.TW",
    "name": "台積電",
    "file": "2330.TW.json",
-   "date": "2026-11-11",
-   "close": 2395.0,
-   "change": 110.0,
-   "pct": 4.814
+   "date": "2026-11-13",
+   "close": 2350.0,
+   "change": 10.0,
+   "pct": 0.4274
   },
   {
    "symbol": "2360.TW",
    "name": "致茂",
    "file": "2360.TW.json",
-   "date": "2026-11-11",
-   "close": 1370.0,
-   "change": 60.0,
-   "pct": 4.5802
+   "date": "2026-11-13",
+   "close": 1400.0,
+   "change": -20.0,
+   "pct": -1.4085
   },
   {
    "symbol": "0050.TW",
    "name": "元大台灣50",
    "file": "0050.TW.json",
-   "date": "2026-11-11",
-   "close": 103.2,
-   "change": 3.5,
-   "pct": 3.5105
+   "date": "2026-11-13",
+   "close": 102.5,
+   "change": 1.55,
+   "pct": 1.5354
   }
  ]
 }
