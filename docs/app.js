@@ -171,9 +171,40 @@
     const q = $('q-change');
     q.className = 'q-change ' + cls(l.change);
     q.textContent = `${l.change > 0 ? '▲' : l.change < 0 ? '▼' : ''} ${fmt(Math.abs(l.change))}　(${l.pct > 0 ? '+' : ''}${fmt(l.pct)}%)`;
-    $('q-date').textContent = `收盤日 ${l.date}`;
-    $('updated').textContent = `資料更新時間：${DATA.updated}（台北）　資料來源：Yahoo Finance（經 yfinance）`;
+    $('q-date').textContent = `收盤日 ${l.date}　·　網站資料產生於 ${(INDEX && INDEX.built) || DATA.updated}`;
+    $('updated').textContent = `這檔資料產生時間：${DATA.updated}（台北）　資料來源：Yahoo Finance（經 yfinance）`;
     $('demo-banner').hidden = !DATA.demo;
+    renderNotices();
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // 台北時間「理論上應該已經有的最新收盤日」：當天 18:00 前不要求有當天資料，週末往前推
+  function expectedLastClose() {
+    const f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+    });
+    const p = Object.fromEntries(f.formatToParts(new Date()).map((x) => [x.type, x.value]));
+    const d = new Date(Date.UTC(+p.year, +p.month - 1, +p.day));
+    if (+p.hour < 18) d.setUTCDate(d.getUTCDate() - 1);
+    while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function renderNotices() {
+    const out = [];
+    const item = INDEX && INDEX.items.find((i) => i.symbol === DATA.symbol);
+    if (item && item.stale) {
+      out.push(`⚠ 這檔最近一次更新<b>失敗</b>，顯示的是舊資料（收盤日 ${esc(DATA.last.date)}）。` +
+        (item.error ? `<br>原因：${esc(item.error)}` : ''));
+    }
+    const exp = expectedLastClose();
+    if (!DATA.demo && DATA.last.date < exp) {
+      out.push(`⚠ 最新收盤日是 ${esc(DATA.last.date)}，但依日期應該已有 ${exp} 的資料。` +
+        '若剛好遇到休市日或連假可忽略；否則代表自動更新沒有成功，請到 GitHub 的 Actions 頁面查看。');
+    }
+    (DATA.notes || []).forEach((t) => out.push('ℹ ' + esc(t)));
+    $('notices').innerHTML = out.map((t) => `<div class="banner">${t}</div>`).join('');
   }
 
   async function loadSymbol(file) {
@@ -211,7 +242,8 @@
     }
     initCharts();
 
-    $('symbol').innerHTML = INDEX.items.map((i) => `<option value="${i.file}">${i.symbol}　${i.name}</option>`).join('');
+    $('symbol').innerHTML = INDEX.items.map((i) =>
+      `<option value="${esc(i.file)}">${esc(i.symbol)}　${esc(i.name)}${i.stale ? '　⚠舊資料' : ''}</option>`).join('');
     const sel = $('strategy');
     await loadSymbol(INDEX.items[0].file);
 

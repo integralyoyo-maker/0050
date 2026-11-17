@@ -4,7 +4,9 @@ on:
   push:
     branches: ["main"]
   schedule:
-    - cron: '0 8 * * 1-5'
+    # UTC 時間（台北 = UTC+8）。刻意避開整點：GitHub 官方說明整點是高負載時段，排程可能延遲甚至被丟棄。
+    - cron: '23 8 * * 1-5'    # 台北 16:23（收盤後）
+    - cron: '47 9 * * 1-5'    # 台北 17:47，備援；若第一次沒跑到或失敗，這次補上
   workflow_dispatch:
 
 permissions:
@@ -18,6 +20,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    timeout-minutes: 15         # Yahoo 卡住時不要無限等
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -34,12 +37,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements ]; then pip install -r requirements; else pip install pandas requests yfinance; fi
+          pip install -r requirements.txt
 
       - name: Run data builder
         run: python build_data.py
 
       - name: Commit and push if data changed
+        continue-on-error: true   # 推送失敗不該害網站停止部署
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
