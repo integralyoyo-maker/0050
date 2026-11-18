@@ -1,146 +1,146 @@
 {
  "demo": false,
- "built": "2026-11-17 20:40",
+ "built": "2026-11-18 23:19",
  "items": [
   {
    "symbol": "^TWII",
    "name": "加權指數",
    "file": "_TWII.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 40092.1094,
-   "change": -947.9688,
-   "pct": -2.3099
+   "date": "2026-11-18",
+   "close": 40194.9102,
+   "change": 102.8008,
+   "pct": 0.2564
   },
   {
    "symbol": "00406A.TW",
    "name": "主動中信台灣收益",
    "file": "00406A.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 6.79,
-   "change": -0.31,
-   "pct": -4.3662
+   "date": "2026-11-18",
+   "close": 6.85,
+   "change": 0.06,
+   "pct": 0.8837
   },
   {
    "symbol": "00407A.TW",
    "name": "主動凱基台灣",
    "file": "00407A.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 7.26,
-   "change": -0.41,
-   "pct": -5.3455
+   "date": "2026-11-18",
+   "close": 7.4,
+   "change": 0.14,
+   "pct": 1.9284
   },
   {
    "symbol": "0050.TW",
    "name": "元大台灣50",
    "file": "0050.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 94.0,
-   "change": -2.45,
-   "pct": -2.5402
+   "date": "2026-11-18",
+   "close": 94.1,
+   "change": 0.1,
+   "pct": 0.1064
   },
   {
    "symbol": "0056.TW",
    "name": "元大高股息",
    "file": "0056.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 49.92,
-   "change": -0.68,
-   "pct": -1.3439
+   "date": "2026-11-18",
+   "close": 49.48,
+   "change": -0.44,
+   "pct": -0.8814
   },
   {
    "symbol": "00878.TW",
    "name": "國泰永續高股息",
    "file": "00878.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 30.86,
-   "change": -1.57,
-   "pct": -4.8412
+   "date": "2026-11-18",
+   "close": 30.65,
+   "change": -0.21,
+   "pct": -0.6805
   },
   {
    "symbol": "00919.TW",
    "name": "群益台灣精選高息",
    "file": "00919.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 30.39,
-   "change": -0.11,
-   "pct": -0.3607
+   "date": "2026-11-18",
+   "close": 29.99,
+   "change": -0.4,
+   "pct": -1.3162
   },
   {
    "symbol": "00981A.TW",
    "name": "主動統一台股增長",
    "file": "00981A.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 21.53,
-   "change": -0.97,
-   "pct": -4.3111
+   "date": "2026-11-18",
+   "close": 22.05,
+   "change": 0.52,
+   "pct": 2.4152
   },
   {
    "symbol": "00990A.TW",
    "name": "主動元大AI新經濟",
    "file": "00990A.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 12.55,
-   "change": -0.29,
-   "pct": -2.2586
+   "date": "2026-11-18",
+   "close": 12.53,
+   "change": -0.02,
+   "pct": -0.1594
   },
   {
    "symbol": "2880.TW",
    "name": "華南金",
    "file": "2880.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 50.8,
-   "change": 0.1,
-   "pct": 0.1972
+   "date": "2026-11-18",
+   "close": 48.2,
+   "change": -2.6,
+   "pct": -5.1181
   },
   {
    "symbol": "2883.TW",
    "name": "凱基金",
    "file": "2883.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 34.15,
+   "date": "2026-11-18",
+   "close": 33.75,
    "change": -0.4,
-   "pct": -1.1577
+   "pct": -1.1713
   },
   {
    "symbol": "3450.TW",
    "name": "聯鈞",
    "file": "3450.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 307.5,
-   "change": -21.0,
-   "pct": -6.3927
+   "date": "2026-11-18",
+   "close": 317.0,
+   "change": 9.5,
+   "pct": 3.0894
   },
   {
    "symbol": "2330.TW",
    "name": "台積電",
    "file": "2330.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 2170.0,
-   "change": -45.0,
-   "pct": -2.0316
+   "date": "2026-11-18",
+   "close": 2175.0,
+   "change": 5.0,
+   "pct": 0.2304
   },
   {
    "symbol": "2360.TW",
    "name": "致茂",
    "file": "2360.TW.json",
    "stale": false,
-   "date": "2026-11-17",
-   "close": 1135.0,
-   "change": -125.0,
-   "pct": -9.9206
+   "date": "2026-11-18",
+   "close": 1140.0,
+   "change": 5.0,
+   "pct": 0.4405
   }
  ]
 }
