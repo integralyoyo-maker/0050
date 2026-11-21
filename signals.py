@@ -69,6 +69,93 @@ def add_vsa(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# ---------------------------------------------------------------- EMA 趨勢 / DMI（我自己定義的版本）
+EMA_SIG_LABELS = {
+    "trend_reentry": "順勢重進",
+    "pullback_sell": "回檔調節",
+    "trend_short": "順勢放空",
+    "bounce_probe": "反彈試單",
+}
+ADX_RANGE = 20      # ADX 低於此值 → 盤整
+ADX_TREND = 25      # ADX 高於此值 → 趨勢；介於兩者之間 → 過渡
+PROBE_STRETCH = 3.0  # 反彈試單：收盤低於 EMA30 至少幾倍 ATR
+PROBE_COOLDOWN = 5   # 反彈試單：同一波下跌中，兩次訊號至少相隔幾根
+
+
+def _rma(s: pd.Series, n: int) -> pd.Series:
+    """Wilder 平滑（TradingView 的 ta.rma）：前 n 筆取平均當起點，之後 (前值*(n-1)+新值)/n。"""
+    v = s.to_numpy(dtype=float)
+    out = np.full(len(v), np.nan)
+    valid = np.flatnonzero(~np.isnan(v))
+    if len(valid) < n:
+        return pd.Series(out, index=s.index)
+    start = valid[n - 1]
+    out[start] = v[valid[:n]].mean()
+    for i in range(start + 1, len(v)):
+        out[i] = out[i - 1] if np.isnan(v[i]) else (out[i - 1] * (n - 1) + v[i]) / n
+    return pd.Series(out, index=s.index)
+
+
+def _cooldown(s: pd.Series, n: int) -> pd.Series:
+    v = s.fillna(False).to_numpy(dtype=bool).copy()
+    last = -10 ** 9
+    for i in range(len(v)):
+        if v[i]:
+            if i - last <= n:
+                v[i] = False
+            else:
+                last = i
+    return pd.Series(v, index=s.index)
+
+
+def add_ema_trend(df: pd.DataFrame) -> pd.DataFrame:
+    """EMA 5/10/30/60/200、DMI(14)、三態市況與四種訊號。
+
+    市況 regime：'r' 盤整(ADX<20)、'x' 過渡(20~25)、't' 趨勢(ADX>=25)；ADX 還沒算出來時是空字串。
+    訊號（全部只用當根與之前的資料；收盤後才成立）：
+      順勢重進：多頭排列(E10>E30>E60)、ADX>=20、+DI>-DI，收盤由下往上站回 E10，且前一根收盤仍在 E30 之上
+      回檔調節：多頭排列中，收盤由上往下跌破 E10
+      順勢放空：空頭排列(E10<E30<E60)、ADX>=20、-DI>+DI，收盤由上往下跌破 E10，且前一根收盤仍在 E30 之下
+      反彈試單：空頭排列、收盤比 E30 低 3 倍 ATR 以上、前一根收黑、本根收紅（同波下跌 5 根內不重複）
+    """
+    c, h, l, o = df["close"], df["high"], df["low"], df["open"]
+    for n in (5, 10, 30, 60):
+        df[f"ema{n}"] = c.ewm(span=n, adjust=False, min_periods=n).mean()
+    if "ema200" not in df:
+        df["ema200"] = c.ewm(span=200, adjust=False, min_periods=200).mean()
+
+    prev_c = c.shift()
+    tr = pd.concat([h - l, (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
+    up_move, dn_move = h.diff(), -l.diff()
+    plus_dm = pd.Series(np.where((up_move > dn_move) & (up_move > 0), up_move, 0.0), index=df.index)
+    minus_dm = pd.Series(np.where((dn_move > up_move) & (dn_move > 0), dn_move, 0.0), index=df.index)
+    atr = _rma(tr, 14)
+    pdi = 100 * _rma(plus_dm, 14) / atr
+    mdi = 100 * _rma(minus_dm, 14) / atr
+    dx = 100 * (pdi - mdi).abs() / (pdi + mdi).replace(0, np.nan)
+    adx = _rma(dx, 14)
+    df["atr14"], df["pdi"], df["mdi"], df["adx"] = atr, pdi, mdi, adx
+    df["regime"] = np.where(adx.isna(), "", np.where(adx >= ADX_TREND, "t", np.where(adx >= ADX_RANGE, "x", "r")))
+
+    e10, e30, e60 = df["ema10"], df["ema30"], df["ema60"]
+    bull = (e10 > e30) & (e30 > e60)
+    bear = (e10 < e30) & (e30 < e60)
+    trending = adx >= ADX_RANGE
+    cross_dn = (prev_c >= e10.shift()) & (c < e10)
+    cross_up = (prev_c <= e10.shift()) & (c > e10)
+
+    sig = {
+        "trend_reentry": bull & trending & (pdi > mdi) & cross_up & (prev_c > e30.shift()),
+        "pullback_sell": bull & cross_dn,
+        "trend_short": bear & trending & (mdi > pdi) & cross_dn & (prev_c < e30.shift()),
+        "bounce_probe": _cooldown(
+            bear & ((e30 - c) / atr >= PROBE_STRETCH) & (c > o) & (prev_c < o.shift()), PROBE_COOLDOWN),
+    }
+    for k, v in sig.items():
+        df[f"es_{k}"] = v.fillna(False).astype(bool)
+    return df
+
+
 # ---------------------------------------------------------------- 未補缺口
 def find_unfilled_gaps(df: pd.DataFrame, keep: int = 10):
     """向上缺口：今低 > 昨高；向下缺口：今高 < 昨低。之後價格回到缺口另一端才算「已補」。"""

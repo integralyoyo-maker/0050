@@ -85,3 +85,8 @@ python -m http.server -d docs 8000
 ## 授權提醒
 
 圖表使用 TradingView Lightweight Charts（Apache-2.0），圖上的 TradingView 標誌請保留。
+
+## 新增功能（EMA 趨勢與查詢）
+- 週期切換：小時／日／週／月（小時線 Yahoo 只提供約一年）。
+- 「EMA 趨勢」模式：EMA 5/10/30/60/200、DMI(14) 副圖與盤整／過渡／趨勢背景色、四種訊號（順勢重進、回檔調節、順勢放空、反彈試單）。定義寫在 `signals.py` 的 `add_ema_trend`，是依常見概念自訂，並非他人程式的原始公式。
+- 查詢任一股票：網頁直接向 FinMind 取日線與三大法人買賣超，在瀏覽器內計算指標（與 Python 結果已比對一致）；不含 VSA、缺口、回測。

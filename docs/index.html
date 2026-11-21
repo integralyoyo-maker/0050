@@ -21,6 +21,12 @@
   </div>
 </header>
 
+<form id="lookup" class="lookup" autocomplete="off">
+  <input id="code" type="search" inputmode="search" enterkeyhint="search" placeholder="查詢任一股票：輸入代號或名稱（如 6531、愛普）" aria-label="查詢股票">
+  <button type="submit">查詢</button>
+</form>
+<div id="lookup-msg" class="lookup-msg" hidden></div>
+
 <div id="demo-banner" class="banner" hidden>
   ⚠ 目前顯示的是「範例假資料」，只用來測試版面，數字沒有任何意義。請執行 <code>python build_data.py</code> 產生真實資料。
 </div>
@@ -37,6 +43,13 @@
 </section>
 
 <section class="card">
+  <div class="seg" id="tf" aria-label="週期">
+    <button data-tf="H">小時</button><button data-tf="D" class="on">日</button><button data-tf="W">週</button><button data-tf="M">月</button>
+  </div>
+  <div class="seg" id="mode" aria-label="圖表模式">
+    <button data-m="std" class="on">標準</button><button data-m="ema">EMA 趨勢</button>
+  </div>
+  <div id="regime" class="regime" hidden></div>
   <div class="toggles" id="toggles">
     <label><input type="checkbox" data-k="ma" checked> MA</label>
     <label><input type="checkbox" data-k="boll" checked> 布林</label>
@@ -45,13 +58,20 @@
     <label><input type="checkbox" data-k="vsa2"> VSA 次要訊號</label>
     <label><input type="checkbox" data-k="gap" checked> 未補缺口</label>
     <label><input type="checkbox" data-k="strat" checked> 策略買賣點</label>
+    <label><input type="checkbox" data-k="emas"> EMA 5/10/30/60</label>
+    <label><input type="checkbox" data-k="esig"> EMA 趨勢訊號</label>
+    <label><input type="checkbox" data-k="dmi"> DMI 副圖</label>
   </div>
   <div id="legend" class="legend">&nbsp;</div>
   <div id="chart" class="chart"></div>
+  <div id="dmi-wrap" hidden>
+    <div class="legend dmi-leg"><span class="up">+DI</span>　<span class="down">−DI</span>　<span class="adx">ADX</span>　虛線 20／25　背景：<span class="bgk r">盤整</span><span class="bgk x">過渡</span><span class="bgk t">趨勢</span></div>
+    <div id="dmi" class="chart dmi"></div>
+  </div>
   <div class="hint">左右拖曳平移 · 滾輪或雙指縮放 · 長按/移動查價。紅漲綠跌（台股慣例）。買賣標記是「訊號日」，實際回測在隔天開盤成交。</div>
 </section>
 
-<section class="card">
+<section class="card" id="card-strategy">
   <h2 id="s-title">策略績效</h2>
   <p id="s-desc" class="desc"></p>
   <div id="stats" class="stats"></div>
@@ -60,7 +80,7 @@
   <div class="hint"><span class="dot s"></span>策略　<span class="dot b"></span>買進持有（同期間、同一標的）</div>
 </section>
 
-<section class="card">
+<section class="card" id="card-trades">
   <h2>最近交易明細（最多 30 筆）</h2>
   <div class="table-wrap">
     <table id="trades"><thead>
@@ -69,7 +89,15 @@
   </div>
 </section>
 
-<section class="card">
+<section class="card" id="card-chips" hidden>
+  <h2>法人籌碼（三大法人買賣超）</h2>
+  <div id="chips-sum" class="stats"></div>
+  <div id="chips" class="chart chips"></div>
+  <div class="hint">紅柱買超／綠柱賣超（單位：張），白線為區間累積。三大法人＝外資＋投信＋自營商。資料來源：FinMind，收盤後才會更新，僅顯示日線同一區間。</div>
+  <div id="chips-err" class="hint" hidden></div>
+</section>
+
+<section class="card" id="card-gaps">
   <h2>目前未補缺口</h2>
   <div class="table-wrap">
     <table id="gaps"><thead><tr><th>日期</th><th>方向</th><th>缺口區間</th></tr></thead><tbody></tbody></table>

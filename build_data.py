@@ -3,10 +3,15 @@
 用法：
   python build_data.py                 # 讀 watchlist.txt，抓 Yahoo Finance 資料
   python build_data.py --demo          # 產生「假資料」測試網頁（不連網，數字沒有任何意義）
-  python build_data.py --period 5y     # 抓多久的資料（預設 5y）
+  python build_data.py --period 5y     # 日線抓多久（預設 5y）
+
+每檔標的輸出四個週期的檔案：
+  日線 {代號}.json（含三種策略的回測）、週線 .W.json、月線 .M.json（由日線重新取樣）、
+  小時線 .H.json（另外向 Yahoo 抓約 1 年）。週/月/小時線只有圖表與 EMA 趨勢/DMI 訊號，沒有策略回測。
 
 設計重點：
   * 某一檔抓失敗時，保留它「上一次成功」的資料並在網頁上標示過期，不會讓它從選單消失。
+  * 小時線抓失敗不影響日線；失敗時沿用上一次的小時線檔案。
   * 失敗會用 GitHub Actions 的 ::warning:: 標註，全部失敗才讓工作失敗（GitHub 會寄信通知）。
   * 上市(.TW) 查無資料時自動改試上櫃(.TWO)。
   * 上市不到一年的新 ETF（EMA200 算不出來）照樣顯示，並在網頁提醒回測不可靠。
@@ -28,8 +33,11 @@ import signals as S
 ROOT = Path(__file__).parent
 OUT = ROOT / "docs" / "data"
 TZ = timezone(timedelta(hours=8))
-MIN_BARS = 40            # 少於這個交易日數就不分析
-EMA_OK_BARS = 120        # EMA200 至少有這麼多筆有效值，才從 EMA200 起算回測
+MIN_BARS = {"D": 40, "H": 60, "W": 30, "M": 24}   # 各週期至少要有幾根 K 棒才分析
+EMA_OK_BARS = 120        # 日線：EMA200 至少有這麼多筆有效值，才從 EMA200 起算回測
+HOURLY_PERIOD = "1y"     # Yahoo 的小時線最多只提供約 730 天
+EMIT_BARS = {"H": 700}   # 小時線只輸出最近 700 根（約 140 個交易日），其餘用來暖機指標
+TF_NAME = {"H": "小時", "D": "日", "W": "週", "M": "月"}
 
 
 def expected_last_close(now: datetime):
@@ -53,61 +61,87 @@ def read_watchlist(path: Path):
     return items
 
 
-def _clean(raw: pd.DataFrame) -> pd.DataFrame:
+def _clean(raw: pd.DataFrame, intraday: bool = False) -> pd.DataFrame:
     raw = raw.copy()
-    raw.index = pd.to_datetime(raw.index).tz_localize(None).normalize()
+    idx = pd.to_datetime(raw.index)
+    if getattr(idx, "tz", None) is not None:
+        idx = idx.tz_convert("Asia/Taipei").tz_localize(None)   # 一律換成台北時間的「牆上時間」
+    raw.index = idx if intraday else idx.normalize()
     adj = raw["Adj Close"] if "Adj Close" in raw else raw["Close"]
     df = pd.DataFrame({
         "open": raw["Open"], "high": raw["High"], "low": raw["Low"], "close": raw["Close"],
         "volume": raw["Volume"].fillna(0), "adj": adj,
     }).dropna(subset=["open", "high", "low", "close"])
     df["adj"] = df["adj"].fillna(df["close"])
-    return df[~df.index.duplicated(keep="last")]
+    return df[~df.index.duplicated(keep="last")].sort_index()
 
 
-def fetch_yahoo(symbol: str, period: str):
+def fetch_yahoo(symbol: str, period: str, interval: str = "1d", candidates=None):
     """回傳 (DataFrame, 實際使用的代號)。.TW 查無資料時改試 .TWO（上櫃）。"""
     import yfinance as yf
-    candidates = [symbol] + ([symbol[:-3] + ".TWO"] if symbol.endswith(".TW") else [])
+    intraday = interval != "1d"
+    if candidates is None:
+        candidates = [symbol] + ([symbol[:-3] + ".TWO"] if symbol.endswith(".TW") else [])
     last_err = "Yahoo 沒有回傳資料"
     for sym in candidates:
         raised = False
         for attempt in range(3):          # Yahoo 偶爾限流或暫時失敗，重試
             try:
-                raw = yf.Ticker(sym).history(period=period, interval="1d", auto_adjust=False)
+                raw = yf.Ticker(sym).history(period=period, interval=interval, auto_adjust=False)
             except Exception as e:
                 raised, raw = True, None
                 last_err = f"{type(e).__name__}: {e}"
-                print(f"[重試 {attempt + 1}/3] {sym}: {last_err}", file=sys.stderr)
+                print(f"[重試 {attempt + 1}/3] {sym} {interval}: {last_err}", file=sys.stderr)
             if raw is not None and not raw.empty:
-                # 把 Yahoo 原始的最後 3 筆印在紀錄裡，方便判斷「Yahoo 沒給」還是「程式濾掉」
-                rows = []
-                for i, r in raw.tail(3).iterrows():
-                    vol = "NaN" if pd.isna(r["Volume"]) else f"{int(r['Volume'])}"
-                    rows.append(f"{pd.Timestamp(i).strftime('%m-%d')} 收{r['Close']:.2f} 量{vol}")
-                print(f"[Yahoo 原始最後 3 筆] {sym}: " + " | ".join(rows))
-                return _clean(raw), sym
+                if not intraday:
+                    # 把 Yahoo 原始的最後 3 筆印在紀錄裡，方便判斷「Yahoo 沒給」還是「程式濾掉」
+                    rows = []
+                    for i, r in raw.tail(3).iterrows():
+                        vol = "NaN" if pd.isna(r["Volume"]) else f"{int(r['Volume'])}"
+                        rows.append(f"{pd.Timestamp(i).strftime('%m-%d')} 收{r['Close']:.2f} 量{vol}")
+                    print(f"[Yahoo 原始最後 3 筆] {sym}: " + " | ".join(rows))
+                return _clean(raw, intraday), sym
             if attempt < 2:
                 time.sleep(4 * (attempt + 1))
         if raised:                         # 有例外＝網路/限流，不是代號問題，不必改試上櫃
             break
-    raise RuntimeError(f"{symbol} 抓不到資料：{last_err}")
+    raise RuntimeError(f"{symbol} {interval} 抓不到資料：{last_err}")
 
 
-def make_demo(symbol: str, days: int = 1300) -> pd.DataFrame:
+def resample_ohlc(df: pd.DataFrame, tf: str) -> pd.DataFrame:
+    """日線 → 週線(W)/月線(M)。K 棒的日期用該期間「最後一個交易日」，不會出現未來日期。"""
+    key = df.index.to_period("W" if tf == "W" else "M")
+    g = df.groupby(key)
+    out = pd.DataFrame({
+        "open": g["open"].first(), "high": g["high"].max(), "low": g["low"].min(),
+        "close": g["close"].last(), "volume": g["volume"].sum(), "adj": g["adj"].last(),
+    })
+    out.index = pd.DatetimeIndex(df.index.to_series().groupby(key).last().values)
+    return out
+
+
+def make_demo(symbol: str, days: int = 1300, hourly: bool = False) -> pd.DataFrame:
     """隨機漫步假資料，只用來測試網頁與程式流程。"""
     import zlib
-    if re.fullmatch(r"\d{5}[A-Z]\.TWO?", symbol):   # 模擬新上市主動式 ETF（資料很短）
+    if not hourly and re.fullmatch(r"\d{5}[A-Z]\.TWO?", symbol):   # 模擬新上市主動式 ETF（資料很短）
         days = 95
-    rng = np.random.default_rng(zlib.crc32(symbol.encode()))
-    idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=days)
-    ret = rng.normal(0.0004, 0.018, days)
+    rng = np.random.default_rng(zlib.crc32((symbol + ("#H" if hourly else "")).encode()))
+    if hourly:      # 台股每天 5 根小時線（09、10、11、12、13 點），約 240 個交易日
+        day_idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=240)
+        idx = pd.DatetimeIndex([d + pd.Timedelta(hours=h) for d in day_idx for h in (9, 10, 11, 12, 13)])
+        sigma = 0.008
+    else:
+        idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=days)
+        sigma = 0.018
+    n = len(idx)
+    k = sigma / 0.018
+    ret = rng.normal(0.0004, sigma, n)
     close = 100 * np.exp(np.cumsum(ret))
-    open_ = np.r_[close[0], close[:-1]] * (1 + rng.normal(0, 0.004, days))
-    spread = np.abs(rng.normal(0.012, 0.006, days)) * close
-    high = np.maximum(open_, close) + spread * rng.uniform(0.1, 0.9, days)
-    low = np.minimum(open_, close) - spread * rng.uniform(0.1, 0.9, days)
-    vol = (rng.lognormal(10, 0.5, days) * (1 + 3 * np.abs(ret) / 0.018)).astype(int) * 1000
+    open_ = np.r_[close[0], close[:-1]] * (1 + rng.normal(0, 0.004 * k, n))
+    spread = np.abs(rng.normal(0.012 * k, 0.006 * k, n)) * close
+    high = np.maximum(open_, close) + spread * rng.uniform(0.1, 0.9, n)
+    low = np.minimum(open_, close) - spread * rng.uniform(0.1, 0.9, n)
+    vol = (rng.lognormal(10, 0.5, n) * (1 + 3 * np.abs(ret) / sigma)).astype(int) * 1000
     df = pd.DataFrame({"open": open_, "high": high, "low": low, "close": close,
                        "volume": vol, "adj": close}, index=idx)
     return df.round(2)
@@ -120,9 +154,15 @@ def num(x):
     return round(float(x), 4)
 
 
-def series_points(df, col):
-    return [{"time": d.strftime("%Y-%m-%d"), "value": num(v)}
-            for d, v in df[col].items() if num(v) is not None]
+def tkey(tf: str):
+    """圖表用的時間：日/週/月用 'YYYY-MM-DD'；小時線用秒數（把台北時間當 UTC 算，圖上就會顯示台北時間）。"""
+    if tf == "H":
+        return lambda d: int((d - pd.Timestamp("1970-01-01")) // pd.Timedelta(seconds=1))
+    return lambda d: d.strftime("%Y-%m-%d")
+
+
+def series_points(df, col, tk):
+    return [{"time": tk(d), "value": num(v)} for d, v in df[col].items() if num(v) is not None]
 
 
 def tax_rate(symbol: str) -> float:
@@ -130,77 +170,105 @@ def tax_rate(symbol: str) -> float:
     return 0.001 if symbol.split(".")[0].startswith("00") else 0.003
 
 
-def build_one(symbol: str, name: str, df: pd.DataFrame, demo: bool) -> dict:
+def build_one(symbol: str, name: str, df: pd.DataFrame, demo: bool, tf: str = "D") -> dict:
     df = df.copy()
     n = len(df)
     costs = {"fee": 0.001425, "tax": tax_rate(symbol), "stop": 0.08}
-    if n < MIN_BARS:
-        raise RuntimeError(f"{symbol} 只有 {n} 筆資料（至少需要 {MIN_BARS} 筆）")
+    if n < MIN_BARS[tf]:
+        raise RuntimeError(f"{symbol} {TF_NAME[tf]}線只有 {n} 筆資料（至少需要 {MIN_BARS[tf]} 筆）")
 
-    # 還原價（含除權息）供回測使用；顯示用原始價，與看盤軟體一致
-    factor = (df["adj"] / df["close"]).replace([np.inf, -np.inf], np.nan).fillna(1.0)
-    df["bt_open"] = df["open"] * factor
-    df["bt_close"] = df["adj"]
+    if tf == "D":
+        # 還原價（含除權息）供回測使用；顯示用原始價，與看盤軟體一致
+        factor = (df["adj"] / df["close"]).replace([np.inf, -np.inf], np.nan).fillna(1.0)
+        df["bt_open"] = df["open"] * factor
+        df["bt_close"] = df["adj"]
 
     df = S.add_indicators(df)
     df = S.add_vsa(df)
+    df = S.add_ema_trend(df)
 
     ema_bars = int(df["ema200"].notna().sum())
     notes = []
-    if ema_bars >= EMA_OK_BARS:
-        start_idx = int(df["ema200"].notna().values.argmax())
-    else:
-        start_idx = 29                       # 量能均線 30 日起算
-        notes.append(
-            f"這檔只有 {n} 個交易日的資料（約 {n / 245:.1f} 年），EMA200 只有 {ema_bars} 筆可用，"
-            "「多頭回檔」策略幾乎不會出現訊號，各策略的回測樣本也極少，績效數字參考價值很低。")
+    start_idx = 0
+    if tf == "D":
+        if ema_bars >= EMA_OK_BARS:
+            start_idx = int(df["ema200"].notna().values.argmax())
+        else:
+            start_idx = 29                       # 量能均線 30 日起算
+            notes.append(
+                f"這檔只有 {n} 個交易日的資料（約 {n / 245:.1f} 年），EMA200 只有 {ema_bars} 筆可用，"
+                "「多頭回檔」策略幾乎不會出現訊號，各策略的回測樣本也極少，績效數字參考價值很低。")
+    elif ema_bars == 0:
+        notes.append(f"{TF_NAME[tf]}線只有 {n} 根 K 棒，EMA200 需要至少 200 根才算得出來，所以圖上沒有 EMA200；"
+                     "EMA5～EMA60 與 DMI 不受影響。")
 
-    fmt = lambda d: d.strftime("%Y-%m-%d")
-    candles = [{"time": fmt(d), "open": num(r.open), "high": num(r.high),
+    if tf in EMIT_BARS and len(df) > EMIT_BARS[tf]:
+        df = df.iloc[-EMIT_BARS[tf]:]        # 指標用完整資料暖機算完，只輸出最近這些根，控制檔案大小
+        n = len(df)
+
+    tk = tkey(tf)
+    dfmt =(lambda d: d.strftime("%Y-%m-%d %H:%M")) if tf == "H" else (lambda d: d.strftime("%Y-%m-%d"))
+    candles = [{"time": tk(d), "open": num(r.open), "high": num(r.high),
                 "low": num(r.low), "close": num(r.close)} for d, r in df.iterrows()]
-    volume = [{"time": fmt(d), "value": int(r.volume),
+    volume = [{"time": tk(d), "value": int(r.volume),
                "up": bool(r.close >= r.open)} for d, r in df.iterrows()]
 
     vsa = []
     for key in S.VSA_LABELS:
         col = f"vsa_{key}"
-        vsa += [{"time": fmt(d), "kind": key} for d in df.index[df[col]]]
+        vsa += [{"time": tk(d), "kind": key} for d in df.index[df[col]]]
 
-    gaps = [{**g, "time": fmt(g["time"])} for g in S.find_unfilled_gaps(df)]
+    esig = []
+    for key in S.EMA_SIG_LABELS:
+        esig += [{"time": tk(d), "kind": key} for d in df.index[df[f"es_{key}"]]]
+    esig.sort(key=lambda s: s["time"])
+
+    gaps = [{**g, "time": tk(g["time"])} for g in S.find_unfilled_gaps(df)]
 
     strategies = {}
-    for key, meta in S.STRATEGIES.items():
-        entry, exit_ = S.strategy_signals(df, key)
-        stats, trades, eq, bh = S.backtest(df, entry, exit_, fee=costs["fee"], tax=costs["tax"],
-                                           stop=costs["stop"], start_idx=start_idx)
-        strategies[key] = {
-            **meta,
-            "stats": stats,
-            "trades": [{k: v for k, v in t.items() if k not in ("entry_sig", "exit_sig")} for t in trades[-30:]],
-            "equity": [{"time": fmt(d), "value": num(v)} for d, v in eq.items()],
-            "buyhold": [{"time": fmt(d), "value": num(v)} for d, v in bh.items()],
-            # 圖上只標「實際成交」的買賣（標在訊號日；成交在隔天開盤）
-            "markers": (
-                [{"time": t["entry_sig"], "side": "buy"} for t in trades]
-                + [{"time": t["exit_sig"], "side": "sell"} for t in trades if t["exit_sig"]]
-            ),
-        }
+    if tf == "D":
+        for key, meta in S.STRATEGIES.items():
+            entry, exit_ = S.strategy_signals(df, key)
+            stats, trades, eq, bh = S.backtest(df, entry, exit_, fee=costs["fee"], tax=costs["tax"],
+                                               stop=costs["stop"], start_idx=start_idx)
+            strategies[key] = {
+                **meta,
+                "stats": stats,
+                "trades": [{k: v for k, v in t.items() if k not in ("entry_sig", "exit_sig")} for t in trades[-30:]],
+                "equity": [{"time": tk(d), "value": num(v)} for d, v in eq.items()],
+                "buyhold": [{"time": tk(d), "value": num(v)} for d, v in bh.items()],
+                # 圖上只標「實際成交」的買賣（標在訊號日；成交在隔天開盤）
+                "markers": (
+                    [{"time": t["entry_sig"], "side": "buy"} for t in trades]
+                    + [{"time": t["exit_sig"], "side": "sell"} for t in trades if t["exit_sig"]]
+                ),
+            }
 
     last, prev = df.iloc[-1], df.iloc[-2]
     return {
-        "symbol": symbol, "name": name, "demo": demo,
+        "symbol": symbol, "name": name, "demo": demo, "tf": tf,
         "updated": datetime.now(TZ).strftime("%Y-%m-%d %H:%M"),
-        "last": {"date": fmt(df.index[-1]), "close": num(last.close),
+        "last": {"date": dfmt(df.index[-1]), "close": num(last.close),
                  "change": num(last.close - prev.close),
                  "pct": num((last.close / prev.close - 1) * 100)},
-        "backtest_start": fmt(df.index[start_idx]),
+        "backtest_start": dfmt(df.index[start_idx]),
         "bars": n, "notes": notes,
         "costs": costs,
         "candles": candles, "volume": volume,
-        "volma": series_points(df, "vol_ma30"),
-        "lines": {k: series_points(df, k) for k in ("ma5", "ma20", "ma60", "ema200", "bb_up", "bb_mid", "bb_dn")},
+        "volma": series_points(df, "vol_ma30", tk),
+        "lines": {k: series_points(df, k, tk) for k in
+                  ("ma5", "ma20", "ma60", "ema5", "ema10", "ema30", "ema60", "ema200", "bb_up", "bb_mid", "bb_dn")},
+        "dmi": {k: series_points(df, k, tk) for k in ("adx", "pdi", "mdi")},
+        "regime": [{"time": tk(d), "s": s} for d, s in df["regime"].items()],
+        "now": {"state": last["regime"] or None, "adx": num(last["adx"]),
+                "pdi": num(last["pdi"]), "mdi": num(last["mdi"])},
+        "esig": esig,
         "vsa": vsa, "gaps": gaps, "strategies": strategies,
     }
+
+
+def write_json(path: Path, data: dict):
+    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
 
 def main():
@@ -233,22 +301,51 @@ def main():
         first = False
         try:
             df, used = (make_demo(symbol), symbol) if args.demo else fetch_yahoo(symbol, args.period)
-            data = build_one(symbol, name, df, args.demo)
+            data = build_one(symbol, name, df, args.demo, "D")
         except Exception as e:               # 單一檔失敗不影響其他檔
             msg = str(e).replace("\n", " ")[:300]
             failed.append((symbol, msg))
             print(f"::warning title=更新失敗 {symbol}::{msg}")
             prev = old.get(symbol)
             if prev and (OUT / prev["file"]).exists():
-                index.append({**prev, "name": name, "stale": True, "error": msg})
+                files = prev.get("files") or {"D": prev["file"]}
+                index.append({**prev, "files": files, "name": name, "stale": True, "error": msg})
                 print(f"[沿用舊資料] {symbol} {name}  收盤日 {prev.get('date')}")
             else:
                 print(f"[失敗且無舊資料] {symbol} {name}")
             continue
 
-        fname = symbol.replace("^", "_").replace("&", "_").replace("=", "_") + ".json"
-        (OUT / fname).write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        index.append({"symbol": symbol, "name": name, "file": fname, "stale": False, **data["last"]})
+        base = symbol.replace("^", "_").replace("&", "_").replace("=", "_")
+        files = {"D": base + ".json"}
+        write_json(OUT / files["D"], data)
+
+        for tf in ("W", "M"):                # 週/月線由日線重新取樣，不必再抓資料
+            try:
+                d2 = build_one(symbol, name, resample_ohlc(df, tf), args.demo, tf)
+            except Exception as e:
+                print(f"[略過{TF_NAME[tf]}線] {symbol}: {e}")
+                continue
+            files[tf] = f"{base}.{tf}.json"
+            write_json(OUT / files[tf], d2)
+
+        try:                                  # 小時線：另外抓，失敗不影響日線
+            if not args.demo:
+                time.sleep(1.5)
+            dfh = make_demo(symbol, hourly=True) if args.demo else fetch_yahoo(used, HOURLY_PERIOD, "1h", candidates=[used])[0]
+            dh = build_one(symbol, name, dfh, args.demo, "H")
+            files["H"] = f"{base}.H.json"
+            write_json(OUT / files["H"], dh)
+            print(f"[小時線] {symbol} 共 {dh['bars']} 根，最新 {dh['last']['date']}")
+        except Exception as e:
+            msg = str(e).replace("\n", " ")[:300]
+            print(f"::warning title=小時線失敗 {symbol}::{msg}")
+            hf = f"{base}.H.json"
+            if (OUT / hf).exists():
+                files["H"] = hf
+                print(f"[小時線沿用舊檔] {symbol}")
+
+        index.append({"symbol": symbol, "name": name, "file": files["D"], "files": files,
+                      "stale": False, **data["last"]})
         extra = f"（{symbol} 查無資料，改用 {used}）" if used != symbol else ""
         print(f"[完成] {symbol} {name}  最新收盤日 {data['last']['date']}  收盤 {data['last']['close']}  共 {data['bars']} 筆 {extra}")
         last_d = datetime.strptime(data["last"]["date"], "%Y-%m-%d").date()
@@ -258,7 +355,9 @@ def main():
         if age > 5 and not args.demo:
             print(f"::warning title=資料偏舊 {symbol}::最新資料是 {data['last']['date']}，距今 {age} 天（連假屬正常）")
 
-    keep = {i["file"] for i in index} | {"index.json"}
+    keep = {"index.json"}
+    for i in index:
+        keep |= set(i["files"].values())
     for f in OUT.glob("*.json"):            # 清掉已不在清單內的舊檔
         if f.name not in keep:
             f.unlink()
