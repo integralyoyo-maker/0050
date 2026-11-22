@@ -56,14 +56,6 @@ jobs:
           if [ "${{ inputs.line_test }}" = "true" ]; then python notify.py --test; fi
           python notify.py
 
-      - name: Commit and push if data changed
-        continue-on-error: true   # 推送失敗不該害網站停止部署
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update stock data" && git push)
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -75,3 +67,13 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # 放在部署之後：先前每次「資料有變動而在部署前 push」都會讓部署找不到 artifact
+      - name: Commit and push if data changed
+        if: always()
+        continue-on-error: true   # 推送失敗不該害網站停止部署
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update stock data" && git push)
