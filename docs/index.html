@@ -27,6 +27,18 @@
 </form>
 <div id="lookup-msg" class="lookup-msg" hidden></div>
 
+<details id="manage" class="manage">
+  <summary>⚙ 管理我的自選清單（選單與 LINE 通知都以此為準）</summary>
+  <div id="wl" class="wl"></div>
+  <div class="hint">按 ✕ 移除；要新增請先用上面的搜尋框查詢該股票，再按「＋加入自選」。變更會寫入 GitHub 的 watchlist.txt，約 2～3 分鐘後選單才會出現新資料。</div>
+  <div class="tok">
+    <div id="tok-state" class="hint"></div>
+    <input id="tok" type="password" autocomplete="off" placeholder="貼上 GitHub 權杖（只存在這支手機的瀏覽器）" aria-label="GitHub 權杖">
+    <button type="button" id="tok-save">儲存權杖</button> <button type="button" id="tok-clear">清除</button>
+    <div class="hint">權杖建立方式：GitHub → Settings → Developer settings → Fine-grained tokens → Generate；Repository access 只選 0050；Permissions → Contents 設為 Read and write。權杖等同密碼，請勿貼給任何人。</div>
+  </div>
+</details>
+
 <div id="demo-banner" class="banner" hidden>
   ⚠ 目前顯示的是「範例假資料」，只用來測試版面，數字沒有任何意義。請執行 <code>python build_data.py</code> 產生真實資料。
 </div>
@@ -40,6 +52,7 @@
   </div>
   <div id="q-change" class="q-change">—</div>
   <div id="q-date" class="q-date"></div>
+  <button type="button" id="add-watch" class="addbtn" hidden>＋加入自選</button>
 </section>
 
 <section class="card">

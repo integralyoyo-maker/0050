@@ -61,5 +61,12 @@ footer{color:var(--mute);font-size:12.5px;margin-top:20px}
 .lookup button:disabled{opacity:.5}
 .lookup-msg{color:var(--mute);font-size:13.5px;margin:0 0 6px}
 .lookup-msg button{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 6px 0 0;font:inherit;font-size:14px;cursor:pointer}
+.manage{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0}
+.manage summary{cursor:pointer;font-size:14.5px;min-height:28px}
+.wl{margin:8px 0}
+.wl div{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.wl button,.tok button,.addbtn{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font:inherit;font-size:14.5px;cursor:pointer;min-height:36px}
+.addbtn{background:#1f3a5c;font-weight:650}
+.tok input{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin:6px 0;font-size:16px}
 [hidden]{display:none!important}
 @media (max-width:600px){.chart{height:400px}.q-price{font-size:32px}}

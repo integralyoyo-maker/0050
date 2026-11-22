@@ -8,6 +8,11 @@ on:
     - cron: '23 8 * * 1-5'    # 台北 16:23（收盤後）
     - cron: '47 9 * * 1-5'    # 台北 17:47，備援；若第一次沒跑到或失敗，這次補上
   workflow_dispatch:
+    inputs:
+      line_test:
+        description: '送一則 LINE 測試訊息（確認通知設定）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -41,6 +46,15 @@ jobs:
 
       - name: Run data builder
         run: python build_data.py
+
+      - name: Send LINE notifications
+        continue-on-error: true   # 通知失敗不該害網站停止部署
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: |
+          if [ "${{ inputs.line_test }}" = "true" ]; then python notify.py --test; fi
+          python notify.py
 
       - name: Commit and push if data changed
         continue-on-error: true   # 推送失敗不該害網站停止部署

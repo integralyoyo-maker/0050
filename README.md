@@ -90,3 +90,8 @@ python -m http.server -d docs 8000
 - 週期切換：小時／日／週／月（小時線 Yahoo 只提供約一年）。
 - 「EMA 趨勢」模式：EMA 5/10/30/60/200、DMI(14) 副圖與盤整／過渡／趨勢背景色、四種訊號（順勢重進、回檔調節、順勢放空、反彈試單）。定義寫在 `signals.py` 的 `add_ema_trend`，是依常見概念自訂，並非他人程式的原始公式。
 - 查詢任一股票：網頁直接向 FinMind 取日線與三大法人買賣超，在瀏覽器內計算指標（與 Python 結果已比對一致）；不含 VSA、缺口、回測。
+
+## 自選清單與 LINE 通知
+- 網頁上「管理我的自選清單」：貼上 GitHub 細粒度權杖（只授權本 repo 的 Contents 讀寫）後，可新增／移除，內容會寫入 `watchlist.txt`，推送後 Actions 自動重建。
+- `notify.py`：每次更新資料後，對清單內每檔的「最新日 K」檢查買入／賣出訊號並用 LINE Messaging API 推播給自己（同一訊號只通知一次，記錄在 `notify_state.json`）。
+- 需要的 GitHub Secrets：`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_USER_ID`。手動執行 workflow 並勾選 `line_test` 可送測試訊息。

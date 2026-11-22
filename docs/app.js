@@ -520,6 +520,60 @@
     }
   }
 
+
+  // ------------------------------------------------------------------ 自選清單管理（透過 GitHub API 修改 watchlist.txt）
+  const GH_OWNER = location.hostname.split('.')[0];
+  const GH_REPO = location.pathname.split('/')[1] || '0050';
+  const getTok = () => { try { return localStorage.getItem('ghtok') || ''; } catch (_) { return ''; } };
+  const setTok = (v) => { try { v ? localStorage.setItem('ghtok', v) : localStorage.removeItem('ghtok'); } catch (_) { /* 無痕模式 */ } };
+
+  async function ghFile() {
+    const tok = getTok();
+    if (!tok) throw new Error('尚未儲存 GitHub 權杖，請先在「管理我的自選清單」貼上權杖');
+    const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/watchlist.txt`;
+    const h = { Authorization: `Bearer ${tok}`, Accept: 'application/vnd.github+json' };
+    const r = await fetch(url, { headers: h });
+    if (r.status === 401 || r.status === 403 || r.status === 404) throw new Error(`GitHub 拒絕存取（${r.status}）：權杖錯誤、已過期，或沒有 0050 的 Contents 讀寫權限`);
+    if (!r.ok) throw new Error('讀取 watchlist.txt 失敗（HTTP ' + r.status + '）');
+    const j = await r.json();
+    const bin = atob(j.content.replace(/\n/g, ''));
+    const text = new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+    return { url, h, sha: j.sha, text };
+  }
+  async function ghSave(f, text, msg) {
+    const bytes = new TextEncoder().encode(text);
+    let bin = ''; bytes.forEach((b) => { bin += String.fromCharCode(b); });
+    const r = await fetch(f.url, { method: 'PUT', headers: { ...f.h, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, content: btoa(bin), sha: f.sha, branch: 'main' }) });
+    if (r.status === 409 || r.status === 422) throw new Error('清單剛好被別處更新，請再按一次');
+    if (!r.ok) throw new Error('寫入失敗（HTTP ' + r.status + '）：權杖需要 Contents 的 Read and write 權限');
+  }
+  const wlSyms = (text) => text.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith('#')).map((l) => l.split(',')[0].trim());
+
+  async function wlAdd(item) {
+    const sym = item.symbol + '.TW';            // 上櫃股程式會自動改試 .TWO
+    const f = await ghFile();
+    if (wlSyms(f.text).some((x) => x.split('.')[0] === item.symbol)) throw new Error(item.symbol + ' 已經在自選清單裡了');
+    const nm = String(item.name).replace(/[,\r\n]/g, '');
+    await ghSave(f, f.text.replace(/\s*$/, '\n') + `${sym},${nm}\n`, `加入自選 ${item.symbol} ${nm}`);
+  }
+  async function wlRemove(symbol) {
+    const f = await ghFile();
+    const lines = f.text.split(/\r?\n/).filter((l) => l.split(',')[0].trim() !== symbol);
+    await ghSave(f, lines.join('\n').replace(/\s*$/, '\n'), `移除自選 ${symbol}`);
+  }
+
+  function renderManage() {
+    $('wl').innerHTML = INDEX.items.map((i) =>
+      `<div><span>${esc(i.symbol)}　${esc(i.name)}</span><button type="button" data-rm="${esc(i.symbol)}">✕</button></div>`).join('');
+    $('tok-state').textContent = getTok() ? '✔ 已儲存權杖（在這支手機的瀏覽器）。' : '尚未儲存權杖：沒有權杖就無法新增／移除。';
+  }
+  function renderAddBtn() {
+    const b = $('add-watch');
+    const inList = ITEM.live && INDEX.items.some((i) => i.symbol.split('.')[0] === ITEM.symbol);
+    b.hidden = !ITEM.live || inList;
+  }
+
   // ------------------------------------------------------------------ 搜尋
   function setLookupMsg(html) { const m = $('lookup-msg'); m.hidden = !html; m.innerHTML = html || ''; }
 
@@ -596,7 +650,7 @@
 
     renderQuote(); renderNotices(); renderRegime(); renderGaps(); renderStrategySection(); applyOverlays();
     $('card-gaps').hidden = !DATA.gaps;
-    loadChips(ITEM, my);
+    loadChips(ITEM, my); renderAddBtn();
   }
 
   async function main() {
@@ -610,7 +664,7 @@
         `<div class="warn">無法載入資料：${e.message}。<br>1) 先執行 <code>python build_data.py</code> 產生 docs/data；<br>2) 不能直接雙擊 index.html，請在專案資料夾執行 <code>python -m http.server -d docs 8000</code> 再開 http://localhost:8000</div>`;
       return;
     }
-    makeEq(); makeChips();
+    makeEq(); makeChips(); renderManage();
     new ResizeObserver(() => {
       const el = $('chart'), e2 = $('eq');
       if (chart && el.clientWidth) {
@@ -630,6 +684,20 @@
       ITEM = e.target.value === 'live' ? LIVE : INDEX.items[+e.target.value];
       if (!ITEM.live) TF = TF === 'H' && !(ITEM.files && ITEM.files.H) ? 'D' : TF;
       load().catch((x) => alert(x.message));
+    });
+    $('tok-save').addEventListener('click', () => { const v = $('tok').value.trim(); if (v) { setTok(v); $('tok').value = ''; renderManage(); } });
+    $('tok-clear').addEventListener('click', () => { setTok(''); renderManage(); });
+    $('add-watch').addEventListener('click', async (e) => {
+      const b = e.target; b.disabled = true; const t0 = b.textContent; b.textContent = '寫入中…';
+      try { await wlAdd(ITEM); setLookupMsg(`✔ 已加入 ${esc(ITEM.symbol)}。約 2～3 分鐘後（網站重新建置完成）重新整理，就會出現在選單，並納入 LINE 通知。`); b.hidden = true; }
+      catch (x) { setLookupMsg('⚠ ' + esc(x.message)); if (!getTok()) $('manage').open = true; }
+      finally { b.disabled = false; b.textContent = t0; }
+    });
+    $('wl').addEventListener('click', async (e) => {
+      const b = e.target.closest('button[data-rm]'); if (!b) return;
+      if (!confirm(`從自選清單移除 ${b.dataset.rm}？`)) return;
+      try { await wlRemove(b.dataset.rm); b.closest('div').remove(); setLookupMsg(`✔ 已移除 ${esc(b.dataset.rm)}，約 2～3 分鐘後選單更新。`); }
+      catch (x) { setLookupMsg('⚠ ' + esc(x.message)); }
     });
     $('lookup').addEventListener('submit', async (e) => {
       e.preventDefault();
