@@ -574,6 +574,36 @@
     b.hidden = !ITEM.live || inList;
   }
 
+
+  // ------------------------------------------------------------------ 盤中報價（由 quotes 分支的 quotes.json 提供，約每 5 分鐘更新）
+  let QUOTES = null;
+  async function fetchQuotes() {
+    try {
+      const r = await fetch(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/quotes/quotes.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (r.ok) QUOTES = await r.json();
+    } catch (_) { /* 沒有報價檔就維持收盤資料 */ }
+  }
+  function applyQuote() {
+    if (!QUOTES || !ITEM || ITEM.live || !DATA || !chart) return;
+    const q = QUOTES.items && QUOTES.items[ITEM.symbol];
+    if (!q || q.date < ITEM.date) return;
+    const p = $('q-price'); p.textContent = fmt(q.close); p.className = 'q-price ' + cls(q.change);
+    const c = $('q-change'); c.className = 'q-change ' + cls(q.change);
+    c.textContent = `${q.change > 0 ? '▲' : q.change < 0 ? '▼' : ''} ${fmt(Math.abs(q.change))}　(${q.pct > 0 ? '+' : ''}${fmt(q.pct)}%)`;
+    $('q-date').textContent = `報價日 ${q.date}　·　報價檔更新 ${QUOTES.updated}（Yahoo 台股約延遲 20 分鐘；盤後為收盤價）`;
+    if (TF !== 'D') return;
+    const last = DATA.candles[DATA.candles.length - 1];
+    if (q.date < last.time) return;
+    const bar = { time: q.date, open: q.open, high: q.high, low: q.low, close: q.close };
+    const vb = { time: q.date, value: q.volume, up: q.close >= q.open };
+    if (q.date === last.time) { DATA.candles[DATA.candles.length - 1] = bar; DATA.volume[DATA.volume.length - 1] = vb; }
+    else { DATA.candles.push(bar); DATA.volume.push(vb); }
+    candle.update(bar);
+    volSeries.update({ time: q.date, value: q.volume, color: vb.up ? 'rgba(239,83,80,.55)' : 'rgba(38,166,154,.55)' });
+    updateLegend(null);
+  }
+  async function refreshQuotes() { await fetchQuotes(); applyQuote(); }
+
   // ------------------------------------------------------------------ 搜尋
   function setLookupMsg(html) { const m = $('lookup-msg'); m.hidden = !html; m.innerHTML = html || ''; }
 
@@ -650,7 +680,7 @@
 
     renderQuote(); renderNotices(); renderRegime(); renderGaps(); renderStrategySection(); applyOverlays();
     $('card-gaps').hidden = !DATA.gaps;
-    loadChips(ITEM, my); renderAddBtn();
+    loadChips(ITEM, my); renderAddBtn(); applyQuote();
   }
 
   async function main() {
@@ -727,7 +757,10 @@
       applyOverlays();
     }));
 
+    await fetchQuotes();
     await load();
+    setInterval(() => { if (!document.hidden) refreshQuotes(); }, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshQuotes(); });
   }
 
   window.__lt = () => DATA;   // 除錯／測試用

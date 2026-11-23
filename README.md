@@ -95,3 +95,6 @@ python -m http.server -d docs 8000
 - 網頁上「管理我的自選清單」：貼上 GitHub 細粒度權杖（只授權本 repo 的 Contents 讀寫）後，可新增／移除，內容會寫入 `watchlist.txt`，推送後 Actions 自動重建。
 - `notify.py`：每次更新資料後，對清單內每檔的「最新日 K」檢查買入／賣出訊號並用 LINE Messaging API 推播給自己（同一訊號只通知一次，記錄在 `notify_state.json`）。
 - 需要的 GitHub Secrets：`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_USER_ID`。手動執行 workflow 並勾選 `line_test` 可送測試訊息。
+
+## 盤中報價
+`quotes.yml` 在台北 09:00～13:55 每 5 分鐘執行 `quotes.py`，把報價推到 `quotes` 分支（單一 commit、強制覆蓋，不會讓 repo 變大）。網頁每 60 秒（及切回頁面時）讀取並更新標題價格與最後一根日 K。Yahoo 台股約延遲 20 分鐘，GitHub 排程也可能延遲，所以是「近似即時」。
