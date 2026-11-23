@@ -1,6 +1,6 @@
 {
  "demo": false,
- "built": "2026-11-23 15:06",
+ "built": "2026-11-24 04:21",
  "items": [
   {
    "symbol": "^TWII",
@@ -13,10 +13,10 @@
     "H": "_TWII.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 36811.8906,
-   "change": 778.6016,
-   "pct": 2.1608
+   "date": "2026-11-20",
+   "close": 36033.2891,
+   "change": -2393.6016,
+   "pct": -6.229
   },
   {
    "symbol": "00406A.TW",
@@ -73,10 +73,10 @@
     "H": "0056.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 45.4,
-   "change": 1.09,
-   "pct": 2.4599
+   "date": "2026-11-20",
+   "close": 44.31,
+   "change": -3.1,
+   "pct": -6.5387
   },
   {
    "symbol": "00878.TW",
@@ -151,10 +151,10 @@
     "H": "2880.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 44.9,
-   "change": -2.1,
-   "pct": -4.4681
+   "date": "2026-11-20",
+   "close": 47.0,
+   "change": -1.85,
+   "pct": -3.7871
   },
   {
    "symbol": "2883.TW",
@@ -167,10 +167,10 @@
     "H": "2883.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 29.6,
-   "change": -0.3,
-   "pct": -1.0033
+   "date": "2026-11-20",
+   "close": 29.9,
+   "change": -1.95,
+   "pct": -6.1225
   },
   {
    "symbol": "3450.TW",
@@ -183,10 +183,10 @@
     "H": "3450.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 258.5,
-   "change": 1.5,
-   "pct": 0.5837
+   "date": "2026-11-20",
+   "close": 257.0,
+   "change": -28.5,
+   "pct": -9.9825
   },
   {
    "symbol": "2330.TW",
@@ -199,10 +199,10 @@
     "H": "2330.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
-   "close": 2030.0,
-   "change": 30.0,
-   "pct": 1.5
+   "date": "2026-11-20",
+   "close": 2000.0,
+   "change": -100.0,
+   "pct": -4.7619
   },
   {
    "symbol": "2360.TW",
@@ -215,10 +215,10 @@
     "H": "2360.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-23",
+   "date": "2026-11-20",
    "close": 927.0,
-   "change": 0.0,
-   "pct": 0.0
+   "change": -103.0,
+   "pct": -10.0
   }
  ]
 }
