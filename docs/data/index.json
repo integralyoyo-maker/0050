@@ -1,6 +1,6 @@
 {
  "demo": false,
- "built": "2026-11-24 05:43",
+ "built": "2026-11-25 03:35",
  "items": [
   {
    "symbol": "^TWII",
@@ -13,10 +13,10 @@
     "H": "_TWII.H.json"
    },
    "stale": false,
-   "date": "2026-11-20",
-   "close": 36033.2891,
-   "change": -2393.6016,
-   "pct": -6.229
+   "date": "2026-11-23",
+   "close": 36811.8906,
+   "change": 778.6016,
+   "pct": 2.1608
   },
   {
    "symbol": "00406A.TW",
@@ -73,10 +73,10 @@
     "H": "0056.TW.H.json"
    },
    "stale": false,
-   "date": "2026-11-20",
-   "close": 44.31,
-   "change": -3.1,
-   "pct": -6.5387
+   "date": "2026-11-23",
+   "close": 45.4,
+   "change": 1.09,
+   "pct": 2.4599
   },
   {
    "symbol": "00878.TW",
