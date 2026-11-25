@@ -76,6 +76,35 @@ def _clean(raw: pd.DataFrame, intraday: bool = False) -> pd.DataFrame:
     return df[~df.index.duplicated(keep="last")].sort_index()
 
 
+def repair_nan_days(raw: pd.DataFrame, sym: str) -> pd.DataFrame:
+    """Yahoo 偶爾會給「有成交量、但開高低收是 NaN」的日 K（例如 2026-11-24），整天就被濾掉、訊號也算不出來。
+    這時改用小時線把那一天合成出來：開＝第一根開盤、高低＝極值、收＝最後一根收盤（只在當天最後一根是 13 點時才補，避免補到盤中半天資料）。"""
+    import yfinance as yf
+    bad = raw.index[raw["Close"].isna()][-5:]
+    if len(bad) == 0:
+        return raw
+    try:
+        h = yf.Ticker(sym).history(period="15d", interval="1h", auto_adjust=False).dropna(subset=["Close"])
+    except Exception as e:  # noqa: BLE001
+        print(f"[補洞失敗] {sym}: {type(e).__name__}: {e}", file=sys.stderr)
+        return raw
+    if h.empty:
+        return raw
+    raw = raw.copy()
+    hd = pd.Series(h.index.date, index=h.index)
+    for ts in bad:
+        g = h[hd == pd.Timestamp(ts).date()]
+        if g.empty or g.index[-1].hour < 13:
+            continue
+        raw.loc[ts, ["Open", "High", "Low", "Close"]] = [g["Open"].iloc[0], g["High"].max(), g["Low"].min(), g["Close"].iloc[-1]]
+        if "Adj Close" in raw.columns:
+            raw.loc[ts, "Adj Close"] = g["Close"].iloc[-1]
+        vol = raw.loc[ts, "Volume"]
+        raw.loc[ts, "Volume"] = max(0 if pd.isna(vol) else vol, g["Volume"].sum())
+        print(f"[補洞] {sym} {pd.Timestamp(ts).strftime('%m-%d')} 日K 收盤為 NaN，已用小時線合成：收 {g['Close'].iloc[-1]:.2f}")
+    return raw
+
+
 def fetch_yahoo(symbol: str, period: str, interval: str = "1d", candidates=None):
     """回傳 (DataFrame, 實際使用的代號)。.TW 查無資料時改試 .TWO（上櫃）。"""
     import yfinance as yf
@@ -94,6 +123,7 @@ def fetch_yahoo(symbol: str, period: str, interval: str = "1d", candidates=None)
                 print(f"[重試 {attempt + 1}/3] {sym} {interval}: {last_err}", file=sys.stderr)
             if raw is not None and not raw.empty:
                 if not intraday:
+                    raw = repair_nan_days(raw, sym)
                     # 把 Yahoo 原始的最後 3 筆印在紀錄裡，方便判斷「Yahoo 沒給」還是「程式濾掉」
                     rows = []
                     for i, r in raw.tail(3).iterrows():
