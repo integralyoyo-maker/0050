@@ -66,6 +66,15 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true      # 偶爾出現「Found 0 artifacts」（GitHub 端暫時性），等一下再試一次
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before retrying deploy
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (retry)
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       # 放在部署之後：先前每次「資料有變動而在部署前 push」都會讓部署找不到 artifact
