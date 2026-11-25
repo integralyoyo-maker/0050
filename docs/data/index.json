@@ -1,6 +1,6 @@
 {
  "demo": false,
- "built": "2026-11-25 19:25",
+ "built": "2026-11-26 02:43",
  "items": [
   {
    "symbol": "^TWII",
@@ -14,9 +14,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 38195.4297,
-   "change": -1926.9219,
-   "pct": -4.8026
+   "close": 38141.5312,
+   "change": -1980.8203,
+   "pct": -4.9369
   },
   {
    "symbol": "00406A.TW",
@@ -58,9 +58,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 90.3,
-   "change": -5.4,
-   "pct": -5.6426
+   "close": 90.1,
+   "change": -5.6,
+   "pct": -5.8516
   },
   {
    "symbol": "0056.TW",
@@ -74,9 +74,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 45.66,
-   "change": -4.28,
-   "pct": -8.5703
+   "close": 45.64,
+   "change": -4.3,
+   "pct": -8.6103
   },
   {
    "symbol": "00878.TW",
@@ -90,9 +90,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 28.6,
-   "change": -2.21,
-   "pct": -7.173
+   "close": 28.55,
+   "change": -2.26,
+   "pct": -7.3353
   },
   {
    "symbol": "00919.TW",
@@ -106,9 +106,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 27.87,
-   "change": -1.63,
-   "pct": -5.5254
+   "close": 27.76,
+   "change": -1.74,
+   "pct": -5.8983
   },
   {
    "symbol": "00981A.TW",
@@ -121,9 +121,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 20.53,
-   "change": -1.51,
-   "pct": -6.8512
+   "close": 20.48,
+   "change": -1.56,
+   "pct": -7.078
   },
   {
    "symbol": "00990A.TW",
@@ -136,9 +136,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 11.79,
-   "change": -0.5,
-   "pct": -4.0683
+   "close": 11.78,
+   "change": -0.51,
+   "pct": -4.1497
   },
   {
    "symbol": "2880.TW",
@@ -168,9 +168,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 30.05,
-   "change": -2.2,
-   "pct": -6.8217
+   "close": 30.0,
+   "change": -2.25,
+   "pct": -6.9767
   },
   {
    "symbol": "3450.TW",
@@ -184,9 +184,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 277.0,
-   "change": -7.0,
-   "pct": -2.4648
+   "close": 275.5,
+   "change": -8.5,
+   "pct": -2.993
   },
   {
    "symbol": "2330.TW",
@@ -200,9 +200,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 2150.0,
-   "change": -80.0,
-   "pct": -3.5874
+   "close": 2145.0,
+   "change": -85.0,
+   "pct": -3.8117
   },
   {
    "symbol": "2360.TW",
@@ -216,9 +216,9 @@
    },
    "stale": false,
    "date": "2026-11-25",
-   "close": 1010.0,
-   "change": -5.0,
-   "pct": -0.4926
+   "close": 999.0,
+   "change": -16.0,
+   "pct": -1.5764
   }
  ]
 }
