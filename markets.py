@@ -44,13 +44,20 @@ def us_one(sym, name):
         h = h[h.index > h.index[-1] - dt.timedelta(hours=24)]
     else:                                                  # 取最近一個交易日
         h = h[[d == h.index[-1].date() for d in h.index.date]]
+    fut = sym.endswith("=F") or sym.endswith("=X")
+    sess_date = h.index[-1].date()
+    dd = t.history(period="10d", interval="1d", auto_adjust=False).dropna(subset=["Close"])
     prev = None
-    try:
-        prev = num(t.fast_info["previous_close"])
-    except Exception:  # noqa: BLE001
-        pass
+    if not fut:        # 指數／股票：前一個交易日的收盤（以日 K 為準，fast_info 對部分指數曾給出不一致的前收）
+        older = dd[[d < sess_date for d in dd.index.date]]
+        if len(older):
+            prev = float(older["Close"].iloc[-1])
+    if prev is None:
+        try:
+            prev = num(t.fast_info["previous_close"])
+        except Exception:  # noqa: BLE001
+            prev = None
     if not prev:
-        dd = t.history(period="10d", interval="1d", auto_adjust=False).dropna(subset=["Close"])
         prev = float(dd["Close"].iloc[-2]) if len(dd) >= 2 else float(h["Open"].iloc[0])
     loc = h.index.tz_convert(TZ).tz_localize(None)         # 轉成台北時間顯示
     ts = [int((x - dt.datetime(1970, 1, 1)).total_seconds()) for x in loc]
