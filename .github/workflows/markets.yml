@@ -1,0 +1,36 @@
+name: Update US / night-session markets
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'     # 每 5 分鐘（GitHub 可能延遲或略過部分排程）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: markets
+  cancel-in-progress: true
+
+jobs:
+  markets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Fetch markets
+        run: python markets.py "$RUNNER_TEMP/markets_out"
+      - name: Publish to markets branch (single commit, force-push)
+        run: |
+          cd "$RUNNER_TEMP/markets_out"
+          git init -q -b markets
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add markets.json
+          git commit -q -m "markets $(date -u +%FT%TZ)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" markets

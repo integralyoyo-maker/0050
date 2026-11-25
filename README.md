@@ -98,3 +98,6 @@ python -m http.server -d docs 8000
 
 ## 盤中報價
 `quotes.yml` 在台北 09:00～13:55 每 5 分鐘執行 `quotes.py`，把報價推到 `quotes` 分支（單一 commit、強制覆蓋，不會讓 repo 變大）。網頁每 60 秒（及切回頁面時）讀取並更新標題價格與最後一根日 K。Yahoo 台股約延遲 20 分鐘，GitHub 排程也可能延遲，所以是「近似即時」。
+
+## 美股與台指夜盤
+`markets.yml` 約每 5 分鐘執行 `markets.py`（Yahoo 美股指數／期貨／個股／匯率 5 分鐘 K；期交所 MIS 的台指期夜盤報價與 1 分鐘 K），結果推到 `markets` 分支，`docs/markets.html` 直接讀取並每 60 秒更新。

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0f13">
+<title>美股與台指夜盤</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.nav a{color:var(--accent);text-decoration:none;font-size:14.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.tile.on{border-color:var(--accent);background:#14253b}
+.tile .n{font-size:12.5px;color:var(--mute)}.tile .p{font-size:18px;font-weight:650;font-variant-numeric:tabular-nums}.tile .c{font-size:13px;font-variant-numeric:tabular-nums}.tile .t{font-size:11px;color:var(--mute)}
+.big{font-size:38px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.chart.m{height:340px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>美股與台指夜盤</h1>
+  <div class="nav"><a href="index.html">← 回個股頁</a></div>
+</header>
+<div class="seg" id="tabs"><button data-t="us" class="on">美股</button><button data-t="night">台指期夜盤</button></div>
+<div id="msg"></div>
+
+<section id="us">
+  <div id="us-grid" class="grid"></div>
+  <section class="card">
+    <h2 id="us-title">—</h2>
+    <div id="us-sub" class="legend"></div>
+    <div id="us-chart" class="chart m"></div>
+    <div class="hint">5 分鐘 K，時間為台北時間；橫線是前一日收盤。紅漲綠跌（台股慣例，與美股相反）。期貨與匯率近乎 24 小時交易，顯示最近 24 小時。</div>
+  </section>
+</section>
+
+<section id="night" hidden>
+  <section class="quote">
+    <div><div id="n-name" class="q-name">—</div><div id="n-price" class="big">—</div></div>
+    <div id="n-change" class="q-change">—</div>
+    <div id="n-time" class="q-date"></div>
+  </section>
+  <div id="n-stats" class="stats"></div>
+  <section class="card">
+    <div id="n-chart" class="chart m"></div>
+    <div class="hint">夜盤 15:00～次日 05:00，5 分鐘 K（台北時間）；橫線是日盤結算價（夜盤漲跌的基準）。</div>
+  </section>
+  <section class="card">
+    <h2>各月份契約</h2>
+    <div class="table-wrap"><table id="n-table"><thead><tr><th>契約</th><th>成交</th><th>漲跌</th><th>幅度</th><th>高</th><th>低</th><th>量</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</section>
+
+<footer>
+  <p>美股資料來自 Yahoo Finance（可能延遲），台指期夜盤來自期交所公開資訊；約每 5 分鐘更新，但 GitHub 排程可能延遲，請看下方更新時間。僅供參考，不構成投資建議。</p>
+  <p id="updated"></p>
+</footer>
+<script src="lightweight-charts.js"></script>
+<script src="markets.js"></script>
+</body>
+</html>
